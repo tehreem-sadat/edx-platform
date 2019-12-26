@@ -84,7 +84,7 @@ django-splash==0.2.5
 django-statici18n==1.4.0
 django-storages==1.4.1
 django-user-tasks==0.3.0
-django-waffle==0.14.0
+django-waffle==0.18.0
 django-webpack-loader==0.6.0
 django==1.11.27
 djangorestframework-jwt==1.11.0
