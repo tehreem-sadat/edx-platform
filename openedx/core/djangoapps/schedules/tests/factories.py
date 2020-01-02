@@ -22,6 +22,8 @@ class ScheduleFactory(factory.DjangoModelFactory):
     class Meta(object):
         model = models.Schedule
 
+    # TODO remove 'start' field when removing this field from model in column renaming release
+    start = factory.Faker('future_datetime', tzinfo=pytz.UTC)
     start_date = factory.Faker('future_datetime', tzinfo=pytz.UTC)
     upgrade_deadline = factory.Faker('future_datetime', tzinfo=pytz.UTC)
     enrollment = factory.SubFactory(CourseEnrollmentFactory)
