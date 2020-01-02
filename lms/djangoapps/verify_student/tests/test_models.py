@@ -5,7 +5,6 @@ import base64
 import simplejson as json
 from datetime import datetime, timedelta
 
-import boto
 import ddt
 import mock
 import requests.exceptions
@@ -19,7 +18,7 @@ from student.tests.factories import UserFactory
 from testfixtures import LogCapture
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
-from common.test.utils import MockS3Mixin
+from common.test.utils import MockS3BotoStorageMixin
 from lms.djangoapps.verify_student.models import (
     SoftwareSecurePhotoVerification,
     SSOVerification,
@@ -123,12 +122,7 @@ class TestVerification(TestCase):
 @patch.dict(settings.VERIFY_STUDENT, FAKE_SETTINGS)
 @patch('lms.djangoapps.verify_student.models.requests.post', new=mock_software_secure_post)
 @ddt.ddt
-class TestPhotoVerification(TestVerification, MockS3Mixin, ModuleStoreTestCase):
-
-    def setUp(self):
-        super(TestPhotoVerification, self).setUp()
-        connection = boto.connect_s3()
-        connection.create_bucket(FAKE_SETTINGS['SOFTWARE_SECURE']['S3_BUCKET'])
+class TestPhotoVerification(TestVerification, MockS3BotoStorageMixin, ModuleStoreTestCase):
 
     def test_state_transitions(self):
         """
@@ -209,12 +203,10 @@ class TestPhotoVerification(TestVerification, MockS3Mixin, ModuleStoreTestCase):
         user = UserFactory.create()
         attempt = SoftwareSecurePhotoVerification(user=user)
         user.profile.name = u"Rust\u01B4"
-
         attempt.upload_face_image("Just pretend this is image data")
         attempt.upload_photo_id_image("Hey, we're a photo ID")
         attempt.mark_ready()
         attempt.submit()
-
         return attempt
 
     def test_submissions(self):

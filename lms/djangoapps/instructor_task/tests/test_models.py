@@ -5,17 +5,28 @@ Tests for instructor_task/models.py.
 
 import copy
 import time
-from six import StringIO
 
 import boto
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase, override_settings
-from mock import patch
+from mock import Mock, patch
 from opaque_keys.edx.locator import CourseLocator
+from six import StringIO
 
-from common.test.utils import MockS3Mixin
-from lms.djangoapps.instructor_task.models import InstructorTask, ReportStore, TASK_INPUT_LENGTH
+from lms.djangoapps.instructor_task.models import TASK_INPUT_LENGTH, InstructorTask, ReportStore
 from lms.djangoapps.instructor_task.tests.test_base import TestReportMixin
+
+
+class MockReportStore(object):
+    """ Mocking the report store """
+    def __init__(self):
+        self._links = []
+
+    def links_for(self, course_id):  # pylint: disable=unused-argument
+        return self._links[::-1]  # reverse the order
+
+    def store(self, course_id, filename, buff):  # pylint: disable=unused-argument
+        self._links.append((filename, '/static/uploads/'))
 
 
 class TestInstructorTasksModel(TestCase):
@@ -41,7 +52,6 @@ class ReportStoreTestMixin(object):
     """
     Mixin for report store tests.
     """
-
     def setUp(self):
         super(ReportStoreTestMixin, self).setUp()
         self.course_id = CourseLocator(org="testx", course="coursex", run="runx")
@@ -89,7 +99,7 @@ class LocalFSReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, SimpleTe
     # Strip the leading `/`, because boto doesn't want it
     'ROOT_PATH': settings.GRADES_DOWNLOAD['ROOT_PATH'].lstrip('/')
 })
-class S3ReportStoreTestCase(MockS3Mixin, ReportStoreTestMixin, TestReportMixin, SimpleTestCase):
+class S3ReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, SimpleTestCase):
     """
     Test the old S3ReportStore configuration.
     """
@@ -98,9 +108,11 @@ class S3ReportStoreTestCase(MockS3Mixin, ReportStoreTestMixin, TestReportMixin, 
         Create and return a DjangoStorageReportStore using the old
         S3ReportStore configuration.
         """
-        connection = boto.connect_s3()
-        connection.create_bucket(settings.GRADES_DOWNLOAD['BUCKET'])
-        return ReportStore.from_config(config_name='GRADES_DOWNLOAD')
+        with patch.object(ReportStore, 'from_config', return_value=MockReportStore()):
+            with patch.object(boto, 'connect_s3', return_value=Mock()):
+                connection = boto.connect_s3()
+                connection.create_bucket(settings.GRADES_DOWNLOAD['BUCKET'])
+                return ReportStore.from_config(config_name='GRADES_DOWNLOAD')
 
 
 class DjangoStorageReportStoreLocalTestCase(ReportStoreTestMixin, TestReportMixin, SimpleTestCase):
@@ -119,7 +131,7 @@ class DjangoStorageReportStoreLocalTestCase(ReportStoreTestMixin, TestReportMixi
             return ReportStore.from_config(config_name='GRADES_DOWNLOAD')
 
 
-class DjangoStorageReportStoreS3TestCase(MockS3Mixin, ReportStoreTestMixin, TestReportMixin, SimpleTestCase):
+class DjangoStorageReportStoreS3TestCase(ReportStoreTestMixin, TestReportMixin, SimpleTestCase):
     """
     Test the DjangoStorageReportStore implementation using S3 stubs.
     """
@@ -135,12 +147,13 @@ class DjangoStorageReportStoreS3TestCase(MockS3Mixin, ReportStoreTestMixin, Test
             'location': settings.GRADES_DOWNLOAD['ROOT_PATH'],
         }
         with override_settings(GRADES_DOWNLOAD=test_settings):
-            connection = boto.connect_s3()
-            connection.create_bucket(settings.GRADES_DOWNLOAD['STORAGE_KWARGS']['bucket'])
+            with patch.object(boto, 'connect_s3', return_value=Mock()):
+                connection = boto.connect_s3()
+                connection.create_bucket(settings.GRADES_DOWNLOAD['STORAGE_KWARGS']['bucket'])
             return ReportStore.from_config(config_name='GRADES_DOWNLOAD')
 
 
-class TestS3ReportStorage(MockS3Mixin, TestCase):
+class TestS3ReportStorage(TestCase):
     """
     Test the S3ReportStorage to make sure that configuration overrides from settings.FINANCIAL_REPORTS
     are used instead of default ones.

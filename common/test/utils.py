@@ -117,19 +117,18 @@ def skip_signal(signal, **kwargs):
         signal.connect(**kwargs)
 
 
-class MockS3Mixin(object):
+class MockS3BotoStorageMixin(object):
     """
-    TestCase mixin that stubs S3 using the moto library. Note that this will
-    activate httpretty, which will monkey patch socket.
+    TestCase mixin that mocks the S3BotoStorage save method.
     """
     def setUp(self):
-        super(MockS3Mixin, self).setUp()
-        self._mock_s3 = moto.mock_s3_deprecated()
-        self._mock_s3.start()
+        super(MockS3BotoStorageMixin, self).setUp()
+        self.patcher = patch('storages.backends.s3boto.S3BotoStorage.save')
+        self.patcher.start()
 
     def tearDown(self):
-        self._mock_s3.stop()
-        super(MockS3Mixin, self).tearDown()
+        self.patcher.start().stop()
+        super(MockS3BotoStorageMixin, self).tearDown()
 
 
 class reprwrapper(object):
