@@ -88,8 +88,7 @@ class TestBinnedSchedulesBaseResolver(SchedulesResolverTestMixin, TestCase):
     )
     def test_get_course_org_filter_exclude__in(self, course_org_filter, expected_org_list):
         SiteConfigurationFactory.create(
-            site_values={'course_org_filter': course_org_filter},
-            values={'course_org_filter': course_org_filter},
+            site_values={'course_org_filter': course_org_filter}
         )
         mock_query = Mock()
         result = self.resolver.filter_by_org(mock_query)

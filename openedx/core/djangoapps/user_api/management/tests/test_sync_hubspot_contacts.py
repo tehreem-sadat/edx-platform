@@ -31,8 +31,7 @@ class TestHubspotSyncCommand(TestCase):
         super(TestHubspotSyncCommand, cls).setUpClass()
         cls.site_config = SiteConfigurationFactory()
         cls.hubspot_site_config = SiteConfigurationFactory.create(
-            site_values={'HUBSPOT_API_KEY': 'test_key'},
-            values={'HUBSPOT_API_KEY': 'test_key'},
+            site_values={'HUBSPOT_API_KEY': 'test_key'}
         )
         cls.users = []
         cls._create_users(cls.hubspot_site_config)  # users for a site with hubspot integration enabled
