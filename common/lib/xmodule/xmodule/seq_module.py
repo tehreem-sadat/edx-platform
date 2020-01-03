@@ -237,6 +237,21 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             return json.dumps({
                 'complete': complete
             })
+        elif dispatch == 'metadata':
+            context = {'exclude_units': True}
+            prereq_met = True
+            prereq_meta_info = {}
+            banner_text = None
+            display_items = self.get_display_items()
+
+            if self._required_prereq():
+                if self.runtime.user_is_staff:
+                    banner_text = _('This subsection is unlocked for learners when they meet the prerequisite requirements.')
+                else:
+                    # check if prerequisite has been met
+                    prereq_met, prereq_meta_info = self._compute_is_prereq_met(True)
+            meta = self._get_render_metadata(context, display_items, prereq_met, prereq_meta_info, banner_text, STUDENT_VIEW)
+            return json.dumps(meta, indent=4)
         raise NotFoundError('Unexpected dispatch type')
 
     @classmethod
@@ -345,22 +360,29 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
         # NOTE (CCB): We default to true to maintain the behavior in place prior to allowing anonymous access access.
         return context.get('user_authenticated', True)
 
-    def _student_or_public_view(self, context, prereq_met, prereq_meta_info, banner_text=None, view=STUDENT_VIEW):
-        """
-        Returns the rendered student view of the content of this
-        sequential.  If banner_text is given, it is added to the
-        content.
-        """
-        _ = self.runtime.service(self, "i18n").ugettext
+    def student_view_data(self, context=None):
+        context = context or {}
+        context = {'exclude_units': True}
+        prereq_met = True
+        prereq_meta_info = {}
+        banner_text = None
         display_items = self.get_display_items()
-        self._update_position(context, len(display_items))
 
+        if self._required_prereq():
+            if self.runtime.user_is_staff:
+                banner_text = _('This subsection is unlocked for learners when they meet the prerequisite requirements.')
+            else:
+                # check if prerequisite has been met
+                prereq_met, prereq_meta_info = self._compute_is_prereq_met(True)
+        meta = self._get_render_metadata(context, display_items, prereq_met, prereq_meta_info, banner_text, STUDENT_VIEW)
+        return meta
+
+    def _get_render_metadata(self, context, display_items, prereq_met, prereq_meta_info, banner_text=None, view=STUDENT_VIEW, fragment=None):
         if prereq_met and not self._is_gate_fulfilled():
             banner_text = _(
                 'This section is a prerequisite. You must complete this section in order to unlock additional content.'
             )
 
-        fragment = Fragment()
         items = self._render_student_view_for_items(context, display_items, fragment, view) if prereq_met else []
         params = {
             'items': items,
@@ -377,6 +399,20 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             'gated_content': self._get_gated_content_info(prereq_met, prereq_meta_info),
             'exclude_units': context.get('exclude_units', False)
         }
+        return params
+
+    def _student_or_public_view(self, context, prereq_met, prereq_meta_info, banner_text=None, view=STUDENT_VIEW):
+        """
+        Returns the rendered student view of the content of this
+        sequential.  If banner_text is given, it is added to the
+        content.
+        """
+        _ = self.runtime.service(self, "i18n").ugettext
+        display_items = self.get_display_items()
+        self._update_position(context, len(display_items))
+
+        fragment = Fragment()
+        params = self._get_render_metadata(context, display_items, prereq_met, prereq_meta_info, banner_text, view, fragment)
         fragment.add_content(self.system.render_template("seq_module.html", params))
 
         self._capture_full_seq_item_metrics(display_items)
@@ -753,6 +789,9 @@ class SequenceDescriptor(SequenceFields, ProctoringFields, MakoModuleDescriptor,
         xblock_body["content_type"] = "Sequence"
 
         return xblock_body
+
+    def student_view_data(self, context=None):
+        pass
 
 
 class HighlightsFields(object):
