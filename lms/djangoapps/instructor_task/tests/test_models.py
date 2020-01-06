@@ -13,6 +13,7 @@ from mock import Mock, patch
 from opaque_keys.edx.locator import CourseLocator
 from six import StringIO
 
+from common.test.utils import MockS3BotoMixin
 from lms.djangoapps.instructor_task.models import TASK_INPUT_LENGTH, InstructorTask, ReportStore
 from lms.djangoapps.instructor_task.tests.test_base import TestReportMixin
 
@@ -99,7 +100,7 @@ class LocalFSReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, SimpleTe
     # Strip the leading `/`, because boto doesn't want it
     'ROOT_PATH': settings.GRADES_DOWNLOAD['ROOT_PATH'].lstrip('/')
 })
-class S3ReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, SimpleTestCase):
+class S3ReportStoreTestCase(MockS3BotoMixin, ReportStoreTestMixin, TestReportMixin, SimpleTestCase):
     """
     Test the old S3ReportStore configuration.
     """
@@ -109,10 +110,8 @@ class S3ReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, SimpleTestCas
         S3ReportStore configuration.
         """
         with patch.object(ReportStore, 'from_config', return_value=MockReportStore()):
-            with patch.object(boto, 'connect_s3', return_value=Mock()):
-                connection = boto.connect_s3()
-                connection.create_bucket(settings.GRADES_DOWNLOAD['BUCKET'])
-                return ReportStore.from_config(config_name='GRADES_DOWNLOAD')
+            self.mocked_connection.create_bucket(settings.GRADES_DOWNLOAD['BUCKET'])
+            return ReportStore.from_config(config_name='GRADES_DOWNLOAD')
 
 
 class DjangoStorageReportStoreLocalTestCase(ReportStoreTestMixin, TestReportMixin, SimpleTestCase):

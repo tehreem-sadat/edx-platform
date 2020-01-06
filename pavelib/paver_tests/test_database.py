@@ -11,6 +11,7 @@ from unittest import TestCase
 
 from mock import Mock, call, patch
 
+from common.test.utils import MockS3BotoMixin
 from pavelib import database
 from pavelib.utils import db_utils
 from pavelib.utils.db_utils import extract_files_from_zip
@@ -58,20 +59,13 @@ def _write_temporary_db_cache_files(path, files):
             cache_file.write(str(index))
 
 
-class TestPaverDatabaseTasks(PaverTestCase):
+class TestPaverDatabaseTasks(MockS3BotoMixin, PaverTestCase):
     """
     Tests for the high level database tasks
     """
 
     def setUp(self):
         super(TestPaverDatabaseTasks, self).setUp()
-        self.mocked_keys = [Mock(key='test_key_id'), Mock(key='test_key_secret')]
-        self.mocked_connection = Mock()
-
-        with patch('boto.connect_s3', Mock(return_value=self.mocked_connection)):
-            self.bucket = Mock(name='test_bucket')
-            self.mocked_connection.get_bucket = Mock(return_value=self.bucket)
-
         # This value is the actual sha1 fingerprint calculated for the dummy
         # files used in these tests
         self.expected_fingerprint = 'ccaa8d8dcc7d030cd6a6768db81f90d0ef976c3d'

@@ -18,7 +18,7 @@ from student.tests.factories import UserFactory
 from testfixtures import LogCapture
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
-from common.test.utils import MockS3BotoStorageMixin
+from common.test.utils import MockS3BotoMixin
 from lms.djangoapps.verify_student.models import (
     SoftwareSecurePhotoVerification,
     SSOVerification,
@@ -122,7 +122,7 @@ class TestVerification(TestCase):
 @patch.dict(settings.VERIFY_STUDENT, FAKE_SETTINGS)
 @patch('lms.djangoapps.verify_student.models.requests.post', new=mock_software_secure_post)
 @ddt.ddt
-class TestPhotoVerification(TestVerification, MockS3BotoStorageMixin, ModuleStoreTestCase):
+class TestPhotoVerification(TestVerification, MockS3BotoMixin, ModuleStoreTestCase):
 
     def test_state_transitions(self):
         """
