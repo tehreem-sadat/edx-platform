@@ -43,7 +43,7 @@ class MakoLoader(BaseLoader):
         return self.load_template(template_name, template_dirs)
 
     def get_template_sources(self, template_name):
-        return self.base_loader.get_template_sources(tempslate_name)
+        return self.base_loader.get_template_sources(template_name)
 
     def get_contents(self, origin):
         source = ''
