@@ -10,11 +10,13 @@ from django.template.loaders.filesystem import Loader as FilesystemLoader
 
 from edxmako.template import Template
 from openedx.core.lib.tempdir import mkdtemp_clean
+from django.template.loaders.base import Loader as BaseLoader
+
 
 log = logging.getLogger(__name__)
 
 
-class MakoLoader(object):
+class MakoLoader(BaseLoader):
     """
     This is a Django loader object which will load the template as a
     Mako template if the first line is "## mako". It is based off Loader
@@ -40,8 +42,14 @@ class MakoLoader(object):
     def __call__(self, template_name, template_dirs=None):
         return self.load_template(template_name, template_dirs)
 
-    def load_template(self, template_name, template_dirs=None):
-        source, file_path = self.load_template_source(template_name, template_dirs)
+    def get_template_sources(self, template_name):
+        return self.base_loader.get_template_sources(tempslate_name)
+
+    def get_contents(self, origin):
+        source = ''
+        file_path = origin.name
+        with open(origin.name) as fp:
+            source = fp.read()
 
         # In order to allow dynamic template overrides, we need to cache templates based on their absolute paths
         # rather than relative paths, overriding templates would have same relative paths.
@@ -55,7 +63,7 @@ class MakoLoader(object):
                                 output_encoding='utf-8',
                                 default_filters=['decode.utf8'],
                                 encoding_errors='replace',
-                                uri=template_name,
+                                uri=origin.template_name,
                                 engine=engines['mako'])
             return template, None
         else:
@@ -73,10 +81,6 @@ class MakoLoader(object):
                 # This allows for eventual correct identification of the actual template that does
                 # not exist.
                 return source, file_path
-
-    def load_template_source(self, template_name, template_dirs=None):
-        # Just having this makes the template load as an instance, instead of a class.
-        return self.base_loader.load_template_source(template_name, template_dirs)
 
     def reset(self):
         self.base_loader.reset()
